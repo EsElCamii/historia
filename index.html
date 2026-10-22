@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Semana Internacional — Cuatro países</title>
+  <meta name="description" content="Cuatro países, cuatro desafíos ambientales. Proyecto de Semana Internacional.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="prefetch" href="kenia.html">
+</head>
+<body class="globe-page">
+  <main class="stage" id="stage">
+    <canvas id="globe" aria-hidden="true"></canvas>
+    <div class="pins" id="pins"></div>
+
+    <section class="hero-copy" aria-labelledby="title">
+      <p class="kicker">Semana Internacional · NIC 2026</p>
+      <h1 id="title">Un planeta, <em>cuatro</em> desafíos.</h1>
+      <ol class="countries" id="countries">
+        <li><a class="row is-live" href="kenia.html" data-c="0"><span class="idx">01</span><strong>Kenia</strong><span class="go">Explorar →</span></a></li>
+        <li><a class="row is-live" href="australia.html" data-c="1"><span class="idx">02</span><strong>Australia</strong><span class="go">Explorar →</span></a></li>
+        <li><a class="row is-live" href="nueva-zelanda.html" data-c="2"><span class="idx">03</span><strong>Nueva Zelanda</strong><span class="go">Explorar →</span></a></li>
+        <li><a class="row is-live" href="peru.html" data-c="3"><span class="idx">04</span><strong>Perú</strong><span class="go">Explorar →</span></a></li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3-array@3.2.4/dist/d3-array.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-geo@3.1.1/dist/d3-geo.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script>
+  (async () => {
+    const COUNTRIES = [
+      { id: "404", name: "Kenia", ll: [37.9, 0.2], href: "kenia.html" },
+      { id: "036", name: "Australia", ll: [146.8, -19.5], href: "australia.html" },
+      { id: "554", name: "Nueva Zelanda", ll: [172.6, -41.4], href: "nueva-zelanda.html" },
+      { id: "604", name: "Perú", ll: [-75.0, -9.2], href: "peru.html" },
+    ];
+    const rad = Math.PI / 180;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const stage = document.getElementById("stage");
+    const canvas = document.getElementById("globe");
+    const ctx = canvas.getContext("2d");
+    const pinsEl = document.getElementById("pins");
+    const rows = [...document.querySelectorAll(".row")];
+    const css = getComputedStyle(document.documentElement);
+    const C = (n) => css.getPropertyValue(n).trim();
+    const col = { bone: C("--bone"), dim: C("--bone-dim"), sun: C("--sun"), shuka: C("--shuka"), ink: C("--ink"), ink2: C("--ink-2"), ink3: C("--ink-3") };
+
+    const world = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then((r) => r.json());
+    const land = topojson.feature(world, world.objects.land);
+    const countries = topojson.feature(world, world.objects.countries).features;
+    const focus = COUNTRIES.map((c) => countries.find((f) => f.id === c.id));
+
+    // Dot-matrix land: rasterise land once to a small equirectangular mask, then sample it.
+    const MW = 720, MH = 360, STEP = 1.5;
+    const mask = Object.assign(document.createElement("canvas"), { width: MW, height: MH });
+    const mctx = mask.getContext("2d", { willReadFrequently: true });
+    const eq = d3.geoEquirectangular().scale(MW / (2 * Math.PI)).translate([MW / 2, MH / 2]);
+    mctx.beginPath(); d3.geoPath(eq, mctx)(land); mctx.fill();
+    const px = mctx.getImageData(0, 0, MW, MH).data;
+    const pts = []; // [lon, lat, sinφ, cosφ, kind] kind: 0 land, 1 kenya, 2 other featured
+    for (let lat = -84; lat <= 84; lat += STEP) {
+      const dl = STEP / Math.max(0.2, Math.cos(lat * rad));
+      for (let lon = -180; lon < 180; lon += dl) {
+        const x = Math.floor((lon + 180) * 2), y = Math.floor((90 - lat) * 2);
+        if (px[(y * MW + x) * 4 + 3] < 128) continue;
+        let kind = 0;
+        focus.forEach((f, i) => { if (f && !kind && d3.geoContains(f, [lon, lat])) kind = COUNTRIES[i].href ? 1 : 2; });
+        pts.push([lon, lat, Math.sin(lat * rad), Math.cos(lat * rad), kind]);
+      }
+    }
+
+    const proj = d3.geoOrthographic().clipAngle(90).precision(0.4);
+    const path = d3.geoPath(proj, ctx);
+    const grat = d3.geoGraticule10();
+    let W = 0, H = 0, R = 0, cx = 0, cy = 0, dpr = 1;
+    function resize() {
+      const b = stage.getBoundingClientRect();
+      dpr = Math.min(2, devicePixelRatio || 1);
+      W = b.width; H = b.height;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (W < 761) { R = Math.min(W * 0.46, H * 0.3); cx = W / 2; cy = H * 0.38; }
+      else { R = Math.min(H * 0.47, W * 0.36); cx = Math.max(W * 0.56, Math.min(W - R - 24, 340 + R * 0.8)); cy = H * 0.5; } // keep the globe clear of the bottom-left copy
+    }
+    resize();
+    addEventListener("resize", resize);
+
+    // Pins
+    const pins = COUNTRIES.map((c, i) => {
+      if (!c.ll) return null;
+      const el = document.createElement(c.href ? "a" : "button");
+      if (c.href) el.href = c.href; else el.type = "button";
+      el.className = "pin" + (c.href ? " is-live" : "");
+      el.setAttribute("aria-label", c.href ? `Explorar ${c.name}` : `${c.name} — próximamente`);
+      el.innerHTML = `<span class="dot"></span><span class="name">${c.name}</span>`;
+      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse" && settled()) setActive(i); });
+      el.addEventListener("focus", () => setActive(i));
+      el.addEventListener("click", (e) => { if (c.href) { e.preventDefault(); enter(c.href); } else setActive(i); });
+      pinsEl.append(el);
+      return el;
+    });
+
+    // State
+    let rot = [-20, -8, 0], target = null, zoom = 1, dragging = false, vel = 0, active = -1, idleAt = 0;
+    function setActive(i) {
+      active = i;
+      rows.forEach((r, j) => r.classList.toggle("is-active", j === i));
+      pins.forEach((p, j) => p && p.classList.toggle("is-active", j === i));
+      const ll = COUNTRIES[i]?.ll;
+      target = ll ? [-ll[0], -ll[1]] : null;
+    }
+    const settled = () => !target || (Math.abs(((target[0] - rot[0] + 540) % 360) - 180) < 2 && Math.abs(target[1] - rot[1]) < 2);
+    function release() { if (fly) return; target = null; idleAt = performance.now(); }
+    rows.forEach((r) => {
+      const i = +r.dataset.c;
+      r.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") setActive(i); });
+      r.addEventListener("focus", () => setActive(i));
+      r.addEventListener("click", (e) => { if (r.href) { e.preventDefault(); enter(r.href); } else setActive(i); });
+    });
+    // Hover locks the globe on a country until the user drags it; no release on pointerleave (the pin moving away from the cursor used to hand control back to the spin)
+
+    // Drag to spin
+    let lx = 0, ly = 0, down = null;
+    canvas.addEventListener("pointerdown", (e) => { if (fly) return; dragging = true; setActive(-1); lx = e.clientX; ly = e.clientY; down = { x: e.clientX, y: e.clientY, t: performance.now() }; canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging"); });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const k = 0.28 * (300 / R);
+      const dx = (e.clientX - lx) * k;
+      rot[0] += dx; vel = dx;
+      rot[1] = Math.max(-55, Math.min(55, rot[1] - (e.clientY - ly) * k));
+      lx = e.clientX; ly = e.clientY;
+    });
+    const endDrag = () => { dragging = false; canvas.classList.remove("dragging"); idleAt = performance.now(); };
+    // A tap (not a drag) near a ping counts as tapping the ping — forgiving on touch, where pins are small and moving
+    canvas.addEventListener("pointerup", (e) => {
+      endDrag();
+      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8 || performance.now() - down.t > 400) return;
+      const b = stage.getBoundingClientRect();
+      let best = null, bestD = e.pointerType === "mouse" ? 24 : 44;
+      pins.forEach((p, i) => {
+        if (!p || p.hidden) return;
+        const [x, y] = proj(COUNTRIES[i].ll), d = Math.hypot(e.clientX - b.left - x, e.clientY - b.top - y);
+        if (d < bestD) { best = i; bestD = d; }
+      });
+      if (best !== null) enter(COUNTRIES[best].href);
+    });
+    canvas.addEventListener("pointercancel", endDrag);
+
+    // Fly into a country: one tween centres it and zooms in, then navigates (the page transition finishes the move)
+    let fly = null;
+    const ease = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+    function enter(href) {
+      if (fly) return;
+      const i = COUNTRIES.findIndex((c) => c.href && href.endsWith(c.href));
+      setActive(i);
+      if (reduce || i < 0) { location.href = href; return; }
+      const ll = COUNTRIES[i].ll;
+      fly = { t0: performance.now(), from: [rot[0], rot[1]], to: [rot[0] + wrap(-ll[0] - rot[0]), -ll[1]], href };
+      vel = 0; dragging = false;
+      stage.classList.add("is-leaving");
+    }
+    addEventListener("pageshow", (e) => { if (e.persisted) { fly = null; zoom = 1; stage.classList.remove("is-leaving"); release(); } });
+
+    const wrap = (d) => ((d + 540) % 360) - 180;
+    let last = performance.now();
+    function frame(t) {
+      const dt = Math.min(64, t - last); last = t;
+      if (fly) {
+        const p = Math.min(1, (t - fly.t0) / 1150), e = ease(p);
+        rot[0] = fly.from[0] + (fly.to[0] - fly.from[0]) * e;
+        rot[1] = fly.from[1] + (fly.to[1] - fly.from[1]) * e;
+        zoom = 1 + 2.2 * Math.pow(Math.max(0, (p - 0.3) / 0.7), 2);
+        if (p === 1 && !fly.done) { fly.done = true; location.href = fly.href; }
+      } else if (target) {
+        const k = 1 - Math.exp(-dt / 220);
+        rot[0] += wrap(target[0] - rot[0]) * k;
+        rot[1] += (target[1] - rot[1]) * k;
+      } else if (!dragging) {
+        vel *= Math.pow(0.92, dt / 16);
+        rot[0] += vel + (reduce ? 0 : dt * 0.006 * Math.min(1, (t - idleAt) / 1200));
+        if (!reduce) rot[1] += (-8 - rot[1]) * (1 - Math.exp(-dt / 2000));
+      }
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    function draw() {
+      const r = R * zoom;
+      const ocy = cy + (H * 0.5 - cy) * (zoom - 1) / 2.2, ocx = cx + (W * 0.5 - cx) * (zoom - 1) / 2.2;
+      proj.rotate(rot).scale(r).translate([ocx, ocy]);
+      ctx.clearRect(0, 0, W, H);
+
+      // Ocean with soft light from top-left
+      const g = ctx.createRadialGradient(ocx - r * 0.4, ocy - r * 0.45, r * 0.05, ocx, ocy, r * 1.05);
+      g.addColorStop(0, col.ink3); g.addColorStop(1, col.ink);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ocx, ocy, r, 0, 2 * Math.PI); ctx.fill();
+
+      ctx.beginPath(); path(grat); ctx.strokeStyle = "oklch(0.94 0.014 85 / 0.07)"; ctx.lineWidth = 1; ctx.stroke();
+
+      // Dots — size follows the surface normal so the sphere reads as 3D
+      const lc = -rot[0] * rad, sc = Math.sin(-rot[1] * rad), cc = Math.cos(-rot[1] * rad);
+      const base = Math.max(1.1, r / 190);
+      const batches = [[], [], []];
+      for (const p of pts) {
+        const cosc = sc * p[2] + cc * p[3] * Math.cos(p[0] * rad - lc);
+        if (cosc <= 0.02) continue;
+        const xy = proj(p);
+        batches[p[4]].push(xy[0], xy[1], base * (0.35 + 0.75 * cosc));
+      }
+      const fills = [col.dim, col.shuka, col.sun];
+      batches.forEach((b, k) => {
+        ctx.fillStyle = fills[k]; ctx.globalAlpha = k ? 1 : 0.62; ctx.beginPath();
+        for (let i = 0; i < b.length; i += 3) { ctx.moveTo(b[i] + b[i + 2], b[i + 1]); ctx.arc(b[i], b[i + 1], b[i + 2], 0, 2 * Math.PI); }
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      // Rim
+      ctx.beginPath(); ctx.arc(ocx, ocy, r + 0.5, 0, 2 * Math.PI);
+      ctx.strokeStyle = "oklch(0.87 0.165 92 / 0.22)"; ctx.lineWidth = 1; ctx.stroke();
+
+      // Pins follow the globe; hide them on the far side
+      COUNTRIES.forEach((c, i) => {
+        const el = pins[i]; if (!el) return;
+        const cosc = sc * Math.sin(c.ll[1] * rad) + cc * Math.cos(c.ll[1] * rad) * Math.cos(c.ll[0] * rad - lc);
+        const [x, y] = proj(c.ll);
+        el.style.transform = `translate(${x}px, ${y}px)`;
+        el.style.opacity = Math.max(0, Math.min(1, (cosc - 0.08) * 4));
+        el.hidden = cosc < 0.08;
+        el.classList.toggle("flip", x > W - 130);
+      });
+    }
+
+    requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

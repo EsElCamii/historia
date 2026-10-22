@@ -1,0 +1,10 @@
+cover: "Amboseli Park - Kilimanjaro elephant.jpg" — Lafleursauvage — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Amboseli_Park_-_Kilimanjaro_elephant.jpg
+savanna: "Ostrich and acacia tree in Maasai Mara National Reserve, Kenya.jpg" — Daniel Case — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ostrich_and_acacia_tree_in_Maasai_Mara_National_Reserve,_Kenya.jpg
+maasai: "Maasai women 01.jpg" — Ninaras — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Maasai_women_01.jpg
+drum: "Kenyan drummer playing traditional music.jpg" — Timlamec — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kenyan_drummer_playing_traditional_music.jpg
+ranger: "Kws ranger close up.jpg" — Kengitau254 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kws_ranger_close_up.jpg
+farm: "Women smallholder farmers in Kenya.jpg" — McKay Savage from London, UK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Women_smallholder_farmers_in_Kenya.jpg
+conservancy: "Lolldaiga Conservancy, Kenya (54286054017).jpg" — Nina R from Africa — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Lolldaiga_Conservancy,_Kenya_(54286054017).jpg
+elephant: "A lone Elephant at Amboseli.jpg" — Fernando Anuang'a — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:A_lone_Elephant_at_Amboseli.jpg
+dialogue: "Maasai women in community dialogue on financial empowerment in Kajiado County, Kenya.jpg" — Mark Myles Mugambi — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Maasai_women_in_community_dialogue_on_financial_empowerment_in_Kajiado_County,_Kenya.jpg
+migration: "Wbeest Mara.jpg" — T. R. Shankar Raman — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Wbeest_Mara.jpg
